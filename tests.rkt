@@ -43,16 +43,22 @@
                   '("(he)" "(l)" ":" "(o)" "*" "*" "*" "S")
                   '() ""))
                  "hello")
+   ;; Using a builtin that requires something on the stack
+   ;; without something on the stack fails
    (check-exn exn:fail? 
-              (λ()(run 
-                   (make-state '("*")
-                               '()
-                               ""))))
+              (λ()(run (make-state '("*") '() ""))))
    (check-exn exn:fail?
               (λ()(run (make-state '(":") '() ""))))
    (check-exn exn:fail? 
-              (λ()(run (make-state '("!") '() ""))))))
+              (λ()(run (make-state '("!") '() ""))))
+   (check-exn exn:fail? 
+              (λ()(run (make-state '("a") '() ""))))
+   (check-exn exn:fail? 
+              (λ()(run (make-state '("~") '() ""))))
+   (check-exn exn:fail? 
+              (λ()(run (make-state '("^") '() ""))))))
 
 
 (run-tests tokenizer-tests)
 (run-tests classifier-tests)
+(run-tests runner-tests)
