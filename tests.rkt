@@ -1,6 +1,6 @@
 #lang racket
 (require rackunit
-         rackunit/text-ui
+         rackunit/gui
          "interpreter.rkt")
 
 (define tokenizer-tests
@@ -12,7 +12,7 @@
    (check-exn #rx".*Unquoted \\]" (λ()(tokenize "(])")))
    (check-exn #rx".*Unquoted <" (λ()(tokenize "(<)")))
    (check-exn #rx".*Unquoted >" (λ()(tokenize "(>)")))
-   (check-exn #rx".*Unrecognized character" (λ()(tokenize "q")))
+   (check-exn #rx".*Unrecognized character: q" (λ()(tokenize "q")))
    (check-not-exn (λ()(tokenize "(\"[\"]\"<\">\"\")")))
    (check-equal? (tokenize "") '())
    (check-equal? (tokenize "(hello):~a*^!S") 
@@ -59,6 +59,6 @@
               (λ()(run (make-state '("^") '() ""))))))
 
 
-(run-tests tokenizer-tests)
-(run-tests classifier-tests)
-(run-tests runner-tests)
+((make-gui-runner) tokenizer-tests classifier-tests runner-tests)
+;(run-tests classifier-tests)
+;(run-tests runner-tests)
