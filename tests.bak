@@ -40,35 +40,17 @@
    "Helper method tests"
    (check-equal? (push (make-state '("(h)") '()))
                  (make-state '() '("h")))
-   (check-equal? (push (make-state '("(h)" ":") '()))
-                 (make-state '(":") '("h")))
-   (check-equal? (duplicate (make-state '(":") '("h")))
-                 (make-state '() '("h" "h")))
-   (check-equal? (swap (make-state '("~") '("a" "b")))
-                 (make-state '() '("b" "a")))
-   (check-equal? (concat (make-state '("*") '("b" "a")))
-                 (make-state '() '("ab")))
-   (check-equal? (enclose (make-state '("a" "S") '("x")))
-                 (make-state '("S") '("(x)")))
-   (check-equal? (eval (make-state '("^" "S") '(":" "l")))
-                 (make-state '(":" "S") '("l")))
-   (check-equal? (drop (make-state '("!") '("x")))
-                 (make-state '() '()))
-   (check-equal? (prints (make-state '("S") '("hello")))
-                 (make-state '() '()))))
+   (check-equal? (push (make-state '("(h)" ":")))
+                 (make-state '(":") '("h")))))
 
 (define runner-tests
   (test-suite
    "Runner tests"
-   (check-equal? (run (make-state '() '())) '())
+   (check-equal? (run (make-state '() '())) "")
    (check-equal? (run (make-state 
-                  '("(x)" "(he)" "(l)" ":" "(o)" "*" "*" "*" "~" "S")
+                  '("(he)" "(l)" ":" "(o)" "*" "*" "*" "S")
                   '()))
-                 '("hello"))
-   (check-equal? (run (make-state 
-                  '("(x)" "(he)" "(l)" ":" "(o)" "*" "*" "*" "S")
-                  '()))
-                 '("x"))
+                 "hello")
    ;; Using a builtin that requires something on the stack
    ;; without something on the stack fails
    (check-exn exn:fail? 
@@ -85,7 +67,6 @@
               (λ()(run (make-state '("^") '()))))))
 
 
-((make-gui-runner) tokenizer-tests
-                   classifier-tests
-                   helper-tests
-                   runner-tests)
+((make-gui-runner) tokenizer-tests classifier-tests runner-tests)
+;(run-tests classifier-tests)
+;(run-tests runner-tests)
