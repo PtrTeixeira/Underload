@@ -1,7 +1,9 @@
+#! /usr/bin/env racket
 #lang racket
 (require rackunit
          rackunit/gui
-         "interpreter.rkt")
+         "interpreter.rkt"
+         (submod "interpreter.rkt" testing))
 
 (define tokenizer-tests
   (test-suite

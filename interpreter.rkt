@@ -1,10 +1,7 @@
+#! /usr/bin/env racket
 #lang racket
 
-;; I want a macro that transforms (equal?| x (or "a" "b" "c")) => (or (equal x "a") (equal x "b") (equal x "c"))
-
-
-(provide (all-defined-out))
-
+(provide interpret)
 ;; A Token is one of
 ;; - "(.*)"
 ;; - ":"
@@ -218,3 +215,39 @@
 ;; Run program from string input
 (define (interpret program)
   (run (make-state (tokenize program) '())))
+
+;; Testing module: This should only imported if you 
+;; are planning on testing these functions, they are 
+;; implementation details.
+(module* testing #f
+  (provide interpret
+           run
+           tokenize
+           classify
+           push
+           duplicate
+           swap
+           enclose
+           eval
+           drop
+           prints
+           concat
+           (struct-out state)))
+
+;; Provides the command-line methods of interpreting this 
+;; method; runs automatically
+(module+ main
+  (define read-file? (make-parameter #t))
+  
+  (begin0
+    (void)
+    (interpret (command-line 
+                #:program "underload.rkt"
+                #:once-each
+                [("--here" "-s") "Interpret given argument as a program, not a file"
+                                 (read-file? #f)]
+                #:args (input)
+                (if (read-file?)
+                    (call-with-input-file input
+                      (λ(in) (string-trim (read-line in))))
+                    input)))))
