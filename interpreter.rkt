@@ -237,17 +237,39 @@
 ;; Provides the command-line methods of interpreting this 
 ;; method; runs automatically
 (module+ main
+  ;; Treat argument as filename (#t) or program (#f)?
   (define read-file? (make-parameter #t))
   
+  ;; Rebuild the file. I can't just concatenate the lines, cause 
+  ;; newlines are meaningful if they occur in push blocks 
+  ;; (and illegal otherwise). So the fence-post work.
+  ;; rebuild-file: input-port -> String
+  ;; Read back file at input-port
+  (define (rebuild-file input-port)
+    ;; FENCEPOST GARBAGE W/ ACCUM
+    (define (append-items ls accum)
+      (cond [(empty? ls) accum]
+            [(empty? (rest ls)) (string-append accum (first ls))]
+            [else (append-items (rest ls) (string-append accum
+                                                         (first ls) "\n"))]))
+    (append-items (call-with-input-file input-port
+                    (λ(in) (sequence->list (in-lines in))))
+                  ""))
+  
+  ;; Sequencing for side-effects. Interpret has side-effects for reasons 
+  ;; that I explained above, so it needs to be sequenced. ''begin'' can't 
+  ;; be used, because at the module level (ie, here) it doesn't silence 
+  ;; return values, it just splices them into the module. So ''begin0'' 
+  ;; had to be used.
   (begin0
     (void)
     (interpret (command-line 
-                #:program "underload.rkt"
+                #:program "underload"
                 #:once-each
                 [("--here" "-s") "Interpret given argument as a program, not a file"
                                  (read-file? #f)]
                 #:args (input)
                 (if (read-file?)
-                    (call-with-input-file input
-                      (λ(in) (string-trim (read-line in))))
-                    input)))))
+                    (rebuild-file input)
+                    input)))
+    (display "\n")))
