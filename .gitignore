@@ -1,5 +1,0 @@
-
-# Ignore everything that isn't a Racket file or and 
-# Underload file.
-/*
-!*.rkt
