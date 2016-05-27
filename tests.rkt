@@ -1,41 +1,41 @@
 #! /usr/bin/env racket
 #lang racket
 (require rackunit
-         rackunit/gui
-         "interpreter.rkt"
+         rackunit/text-ui
          (submod "interpreter.rkt" testing))
 
 (define tokenizer-tests
   (test-suite
    "Tokenizer Checking"
-   (check-pred list? (tokenize ""))
-   (check-pred list? (tokenize "(hello):~*a^!S"))
-   (check-exn #rx".*Unquoted \\[" (λ()(tokenize "([)")))
-   (check-exn #rx".*Unquoted \\]" (λ()(tokenize "(])")))
-   (check-exn #rx".*Unquoted <" (λ()(tokenize "(<)")))
-   (check-exn #rx".*Unquoted >" (λ()(tokenize "(>)")))
-   (check-exn #rx".*Unrecognized character: q" (λ()(tokenize "q")))
-   (check-not-exn (λ()(tokenize "(\"[\"]\"<\">\"\")")))
-   (check-equal? (tokenize "") '())
+   (check-pred list? (tokenize "") "Sanity check: Tokenizing the empty string gives a list")
+   (check-pred list? (tokenize "(hello):~*a^!S") "Sanity check: Tokenizing a non-empty string gives a list")
+   (check-exn #rx".*Unquoted \\[" (λ()(tokenize "([)")) "[ character must be escaped")
+   (check-exn #rx".*Unquoted \\]" (λ()(tokenize "(])")) "] character must be escaped")
+   (check-exn #rx".*Unquoted <" (λ()(tokenize "(<)")) "< character must be escaped")
+   (check-exn #rx".*Unquoted >" (λ()(tokenize "(>)")) "> character must be escaped")
+   (check-exn #rx".*Unrecognized character: q" (λ()(tokenize "q")) "non-commands should not be at the top level")
+   (check-not-exn (λ()(tokenize "(\"[\"]\"<\">\"\")")) "Escaped characters do not raise exceptions")
+   (check-equal? (tokenize "") '() "Tokenizing the empty string gives back an empty list")
    (check-equal? (tokenize "(hello):~a*^!S") 
-                 '("(hello)" ":" "~" "a" "*" "^" "!" "S"))
+                 '("(hello)" ":" "~" "a" "*" "^" "!" "S") "Different commands are split into different tokens")
    (check-equal? (tokenize "(he()o)")
-                 '("(he()o)"))
+                 '("(he()o)") "Tokenizer permits nested parens")
    (check-equal? (tokenize "(he)(l):(o)***S")
-                 '("(he)" "(l)" ":" "(o)" "*" "*" "*" "S"))))
+                 '("(he)" "(l)" ":" "(o)" "*" "*" "*" "S")
+                 "Different commands are split into different tokens")))
 
 
 (define classifier-tests 
   (test-suite 
    "Classifier Tests"
-   (check-equal? (classify "(hello)") 'push)
-   (check-equal? (classify "*") 'concat)
-   (check-equal? (classify ":") 'duplicate)
-   (check-equal? (classify "~") 'swap)
-   (check-equal? (classify "a") 'enclose)
-   (check-equal? (classify "^") 'eval)
-   (check-equal? (classify "!") 'drop)
-   (check-equal? (classify "S") 'print)))
+   (check-equal? (classify "(hello)") 'push "Push token recognized")
+   (check-equal? (classify "*") 'concat "Concat token recognized")
+   (check-equal? (classify ":") 'duplicate "Duplicate token recognized")
+   (check-equal? (classify "~") 'swap "Swap token recognized")
+   (check-equal? (classify "a") 'enclose "Enclose token recognized")
+   (check-equal? (classify "^") 'eval "Eval token recognized")
+   (check-equal? (classify "!") 'drop "Drop token recognized")
+   (check-equal? (classify "S") 'print "Print token recognized")))
 
 (define helper-tests
   (test-suite 
@@ -62,32 +62,43 @@
 (define runner-tests
   (test-suite
    "Runner tests"
-   (check-equal? (run (make-state '() '())) '())
+   (check-equal? (run (make-state '() '())) '() "Running from empty state gives empty state")
    (check-equal? (run (make-state 
                   '("(x)" "(he)" "(l)" ":" "(o)" "*" "*" "*" "~" "S")
                   '()))
-                 '("hello"))
+                 '("hello")
+                 "Running from a non-empty state yields a result")
    (check-equal? (run (make-state 
                   '("(x)" "(he)" "(l)" ":" "(o)" "*" "*" "*" "S")
                   '()))
-                 '("x"))
+                 '("x")
+                 "Running from a non-empty state yields a result")
    ;; Using a builtin that requires something on the stack
    ;; without something on the stack fails
    (check-exn exn:fail? 
-              (λ()(run (make-state '("*") '()))))
+              (λ()(run (make-state '("*") '())))
+              "Concatenating on an empty stack fails")
    (check-exn exn:fail?
-              (λ()(run (make-state '(":") '()))))
+              (λ()(run (make-state '(":") '())))
+              "Duplicating on an empty stack fails")
    (check-exn exn:fail? 
-              (λ()(run (make-state '("!") '()))))
+              (λ()(run (make-state '("!") '())))
+              "Dropping on an empty stack fails")
    (check-exn exn:fail? 
-              (λ()(run (make-state '("a") '()))))
+              (λ()(run (make-state '("a") '())))
+              "Enclosing on an empty stack fails")
    (check-exn exn:fail? 
-              (λ()(run (make-state '("~") '()))))
+              (λ()(run (make-state '("~") '())))
+              "Swapping on an empty stack fails")
    (check-exn exn:fail? 
-              (λ()(run (make-state '("^") '()))))))
+              (λ()(run (make-state '("^") '())))
+              "Evaluating an empty stack fails")))
 
+(define all-tests
+  (test-suite "Full Test Suite"
+              tokenizer-tests
+              classifier-tests
+              helper-tests
+              runner-tests))
 
-((make-gui-runner) tokenizer-tests
-                   classifier-tests
-                   helper-tests
-                   runner-tests)
+(run-tests all-tests)
