@@ -6,4 +6,4 @@ jobs:
       - image: ptrteixeira/racket:6.9
     steps:
       - checkout
-      - raco test --table ~/build
+      - run: raco test --table ~/build
