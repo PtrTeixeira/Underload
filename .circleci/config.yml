@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: ~/build
     docker:
-      - image: ptrteixeira:racket:6.9
+      - image: ptrteixeira/racket:6.9
     steps:
       - checkout
-      - raco test --table ~/build
+      - run: raco test --table ~/build
