@@ -1,4 +1,5 @@
 #lang typed/racket
+(require "interpreter-service.rkt")
 
 (provide interpret)
 ;; A Token is one of
@@ -39,69 +40,18 @@
 ;; I don't like types having lowercase names.
 (define-type State state)
 
-;; tokenize: String -> [List Token]
-;; Breaks the input string into tokens, as per underload.
-;; Throws an error upon hitting an unrecognized token
-(: tokenize (-> String (Listof Token)))
-(define (tokenize str)
-  ;; take-token: String -> Token
-  ;; Produce the first token present in the string
-  (: take-token (-> String Token))
-  (define (take-token str)
-    (let ((fst (substring str 0 1)))
-      (cond [(or (string=? fst ":") (string=? fst "~")
-                 (string=? fst "*") (string=? fst "a")
-                 (string=? fst "^") (string=? fst "!")
-                 (string=? fst "S")) fst]
-            [(string=? fst "(") (take-push-token str)]
-            [else (error (string-append "Unrecognized character: " fst))])))
-  
-  ;; take-push-token-helper: String String Int -> Token
-  ;; Helper method to count off paren depth
-  (: take-push-token-helper (-> String String Integer Token))
-  (define (take-push-token-helper str build depth)
-  (cond [(zero? depth) build]
-        [else 
-         (let ((fst (substring str 0 1))
-               (rst (substring str 1)))
-                (cond [(string=? fst "(") 
-                       (take-push-token-helper 
-                        rst (string-append build fst) (+ depth 1))]
-                      [(string=? fst ")")
-                       (take-push-token-helper 
-                        rst (string-append build fst) (- depth 1))]
-                      [else 
-                       (take-push-token-helper 
-                        rst (string-append build fst) depth)]))]))
-
-  ;; take-push-token: String -> Token
-  ;; Parse and return a push token
-  (: take-push-token (-> String Token))
-  (define (take-push-token str)
-    (take-push-token-helper (substring str 1) "(" 1))
-
-  ;; drop-token: String -> String
-  ;; Return the string, absent the first token present
-  (: drop-token (-> String Token String))
-  (define (drop-token str token)
-    (substring str (string-length token)))
-
-  (cond [(string=? str "") '()]
-        [else (let ((token (take-token str)))
-                (cons token (tokenize (drop-token str token))))]))
-
 ;; classify: Token -> Classification
 ;; Classify each token by the action that is required
 (: classify (-> Token Classification))
-(define (classify token)
-  (cond [(string=? token ":") 'duplicate]
-        [(string=? token "~") 'swap]
-        [(string=? token "*") 'concat]
-        [(string=? token "a") 'enclose]
-        [(string=? token "^") 'eval]
-        [(string=? token "!") 'drop]
-        [(string=? token "S") 'print]
-        [else 'push]))
+(define/match (classify token)
+  [(":") 'duplicate]
+  [("~") 'swap]
+  [("*") 'concat]
+  [("a") 'enclose]
+  [("^") 'eval]
+  [("!") 'drop]
+  [("S") 'print]
+  [(_)   'push])
 
 ;; print-state: State -> String
 ;; Do a print-out of the current state
