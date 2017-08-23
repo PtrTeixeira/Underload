@@ -2,7 +2,8 @@
 #lang racket
 (require rackunit
          rackunit/text-ui
-         (submod "interpreter.rkt" testing))
+         (submod "interpreter-service.rkt" testing)
+         "interpreter.rkt")
 
 (define tokenizer-tests
   (test-suite
