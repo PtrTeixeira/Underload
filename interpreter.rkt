@@ -208,38 +208,37 @@
 ;; Throw error if stack is empty
 ;; SIDE EFFECT: Will print to standard output
 ;; Print & drop first element from the stack
-(: prints (-> State State))
-(define (prints state)
+(: prints (-> State Output-Port State))
+(define (prints state port)
   (if (empty? (state-stack state))
       (error (string-append "Attempted to print from empty stack: "
                             (print-state state)))
       (begin
-        (display (first (state-stack state)))
+        (display (first (state-stack state)) port)
         (make-state (rest (state-program state))
                     (rest (state-stack state))))))
 
 
-;; run: State -> [List String]
 ;; Run the program from a state
 ;; Output from the program is immediately printed to sout, rather than 
 ;; -> returned. This has to do with how the interpreter should behave 
 ;; -> on infinite programs. The returned value is the stack after the 
 ;; -> program terminates.
-(: run (-> State (Listof String)))
-(define (run state)
-  (define prgm (state-program state))
-  (define stck (state-stack state))
-  (if (empty? prgm) stck 
-      (letrec ((fst (first prgm))
+(: run (->* (State) (Output-Port) (Listof String)))
+(define (run world [port (current-output-port)])
+  (let ([prgm (state-program world)]
+        [stck (state-stack world)])
+    (if (empty? prgm) stck
+        (let* ((fst (first prgm))
                (type (classify fst)))
-        (cond [(symbol=? type 'push) (run (push state))]
-              [(symbol=? type 'duplicate) (run (duplicate state))]
-              [(symbol=? type 'swap) (run (swap state))]
-              [(symbol=? type 'concat) (run (concat state))]
-              [(symbol=? type 'enclose) (run (enclose state))]
-              [(symbol=? type 'drop) (run (drop state))]
-              [(symbol=? type 'print) (run (prints state))]
-              [(symbol=? type 'eval) (run (eval state))]))))
+          (cond [(symbol=? type 'push) (run (push world) port)]
+                [(symbol=? type 'duplicate) (run (duplicate world) port)]
+                [(symbol=? type 'swap) (run (swap world) port)]
+                [(symbol=? type 'concat) (run (concat world) port)]
+                [(symbol=? type 'enclose) (run (enclose world) port)]
+                [(symbol=? type 'drop) (run (drop world) port)]
+                [(symbol=? type 'print) (run (prints world port) port)]
+                [(symbol=? type 'eval) (run (eval world) port)])))))
 
 
 ;; interpret: String -> [List String]

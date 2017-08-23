@@ -57,23 +57,27 @@
                  (make-state '(":" "S") '("l")))
    (check-equal? (drop (make-state '("!") '("x")))
                  (make-state '() '()))
-   (check-equal? (prints (make-state '("S") '("hello")))
-                 (make-state '() '()))))
+   (let* ([output (open-output-string)]
+         [result (prints (make-state '("S") '("hello")) output)])
+     (check-equal? (get-output-string output) "hello")
+     (check-equal? result (make-state '() '())))))
 
 (define runner-tests
   (test-suite
    "Runner tests"
-   (check-equal? (run (make-state '() '())) '() "Running from empty state gives empty state")
-   (check-equal? (run (make-state 
-                  '("(x)" "(he)" "(l)" ":" "(o)" "*" "*" "*" "~" "S")
-                  '()))
-                 '("hello")
-                 "Running from a non-empty state yields a result")
-   (check-equal? (run (make-state 
-                  '("(x)" "(he)" "(l)" ":" "(o)" "*" "*" "*" "S")
-                  '()))
-                 '("x")
-                 "Running from a non-empty state yields a result")
+   (let* ([output (open-output-string)]
+          [result (run (make-state '() '()) output)])
+     (check-equal? result '() "Running from empty state gives empty list"))
+
+   (let* ([output (open-output-string)]
+          [result (run (make-state
+                        '("(x)" "(he)" "(l)" ":" "(o)" "*" "*" "*" "~" "S")
+                        '()) output)])
+     (check-equal? result '("hello")
+                   "It returns everything left on the stack")
+     (check-equal? (get-output-string output) "x"
+                   "It prints the output to the given port"))
+
    ;; Using a builtin that requires something on the stack
    ;; without something on the stack fails
    (check-exn exn:fail? 
