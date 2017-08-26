@@ -6,4 +6,5 @@ jobs:
       - image: ptrteixeira/racket:6.9
     steps:
       - checkout
+      - run: raco pkg install --installation --auto --link ~/build
       - run: raco test --table ~/build
