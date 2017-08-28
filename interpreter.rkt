@@ -18,30 +18,22 @@
            drop
            prints
            concat
-           (struct-out state)))
+           (struct-out state)
+           (struct-out push-token)))
 
 ;; A Token is one of
-;; - "(.*)"
-;; - ":"
-;; - "~"
-;; - "*"
-;; - "a"
-;; - "^"
-;; - "!"
-;; - "S"
-(define-type Token String)
-
-;; A Classification is one of
-;; - 'push
-;; - 'concat
-;; - 'duplicate
-;; - 'swap
-;; - 'enclose
-;; - 'eval
-;; - 'drop
-;; - 'print
-(define-type Classification 
-  (U 'push
+;; - "($1)" -> (push-token $1)
+;; - ":"      -> 'duplicate
+;; - "~"      -> 'swap
+;; - "*"      -> 'concat
+;; - "a"      -> 'enclose
+;; - "^"      -> 'eval
+;; - "!"      -> 'drop
+;; - "S"      -> 'print
+(struct push-token ([value : String])
+  #:transparent)
+(define-type Token
+  (U push-token
      'concat
      'duplicate
      'swap
@@ -61,7 +53,7 @@
 (define/match (take-tokens chars)
   [('()) '()]
   [((cons (and token (or #\: #\~ #\* #\a #\^ #\! #\S)) chars))
-   (cons (string token) (take-tokens chars))]
+   (cons (classify (string token)) (take-tokens chars))]
   [((cons #\( xs)) (let ([tokens (take-push-token xs "(" 1)])
                    (cons (car tokens) (take-tokens (cdr tokens))))]
   [((cons a _)) (error (~a "Unrecognized character: " a))])
@@ -70,7 +62,7 @@
 ;; Helper method to count off paren depth
 (: take-push-token (-> (Listof Char) String Integer (Pairof Token (Listof Char))))
 (define/match (take-push-token chars result depth)
-  [(_ _ 0) (cons result chars)]
+  [(_ _ 0) (cons (push-token (trim-parens result)) chars)]
   [((cons #\( xs) _ _) (take-push-token xs (~a result #\() (add1 depth))]
   [((cons #\) xs) _ _) (take-push-token xs (~a result #\)) (sub1 depth))]
   [((list-rest #\" (and escaped (or #\< #\> #\[ #\] #\")) xs) _ _)
@@ -87,10 +79,15 @@
 (define (tokenize str)
   (take-tokens (string->list str)))
 
+;; Strip any leading or trailing parens off of a string
+(: trim-parens (-> String String))
+(define (trim-parens str)
+  (string-trim (string-trim str "(") ")"))
+
 ;; classify: Token -> Classification
 ;; Classify each token by the action that is required
-(: classify (-> Token Classification))
-(define/match (classify token)
+(: classify (-> String Token))
+(define/match (classify str)
   [(":") 'duplicate]
   [("~") 'swap]
   [("*") 'concat]
@@ -98,34 +95,19 @@
   [("^") 'eval]
   [("!") 'drop]
   [("S") 'print]
-  [(_)   'push])
+  [(_)   (push-token (trim-parens str))])
 
 ;; print-state: State -> String
 ;; Do a print-out of the current state
 (: print-state (-> State String))
 (define (print-state state)
-  ;; [List <String|Token>] -> String
-  (: prgm-string (-> (Listof String) String))
-  (define (prgm-string lst)
-    (if (empty? lst) ""
-        (string-append (first lst) (prgm-string (rest lst)))))
-  (string-append (prgm-string (state-program state)) 
-                 "\n" (prgm-string (state-stack state))))
+  (~a state))
 
-
-;; Strip any leading or trailing parens off of a string
-(: trim-parens (-> String String))
-(define (trim-parens str)
-  (string-trim (string-trim str "(") ")"))
 
 ;; Push token from program to stack
-(: push (-> State State))
-(define/match (push world)
-  [((state '() _)) (error "Program cannot be empty")]
-  [((state (cons next others) stack))
-   (let ([token (trim-parens next)])
-     (make-state others
-                 (cons token stack)))])
+(: push (-> push-token (Listof Token) (Listof String) State))
+(define (push top tokens stack)
+  (make-state tokens (cons (push-token-value top) stack)))
 
  
 ;; Throw error if trying to duplicate on empty stack
@@ -226,19 +208,19 @@
 ;; -> program terminates.
 (: run (->* (State) (Output-Port) (Listof String)))
 (define (run world [port (current-output-port)])
-  (let ([prgm (state-program world)]
-        [stck (state-stack world)])
-    (if (empty? prgm) stck
-        (let* ((fst (first prgm))
-               (type (classify fst)))
-          (cond [(symbol=? type 'push) (run (push world) port)]
-                [(symbol=? type 'duplicate) (run (duplicate world) port)]
-                [(symbol=? type 'swap) (run (swap world) port)]
-                [(symbol=? type 'concat) (run (concat world) port)]
-                [(symbol=? type 'enclose) (run (enclose world) port)]
-                [(symbol=? type 'drop) (run (drop world) port)]
-                [(symbol=? type 'print) (run (prints world port) port)]
-                [(symbol=? type 'eval) (run (eval world) port)])))))
+  (let ([tokens (state-program world)]
+        [stack (state-stack world)])
+    (if (empty? tokens) stack
+        (let* ([top (first tokens)]
+               [remaining (rest tokens)])
+          (cond [(push-token? top) (run (push top remaining stack) port)]
+                [(symbol=? top 'duplicate) (run (duplicate world) port)]
+                [(symbol=? top 'swap) (run (swap world) port)]
+                [(symbol=? top 'concat) (run (concat world) port)]
+                [(symbol=? top 'enclose) (run (enclose world) port)]
+                [(symbol=? top 'drop) (run (drop world) port)]
+                [(symbol=? top 'print) (run (prints world port) port)]
+                [(symbol=? top 'eval) (run (eval world) port)])))))
 
 
 ;; interpret: String -> [List String]
