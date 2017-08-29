@@ -3,6 +3,7 @@
 (require rackunit
          rackunit/text-ui
          (submod "interpreter.rkt" testing)
+         "ast.rkt"
          "cli.rkt")
 
 (define tokenizer-tests
