@@ -6,6 +6,11 @@
          data/applicative
          "ast.rkt")
 
+(module+ test
+  (require rackunit))
+
+(provide parse)
+
 ; (Listof Char) -> (Parser Char)
 (define (none/p chars)
   (satisfy/p (λ(next) (not (member next chars)))))
@@ -75,3 +80,36 @@
   (do [program <- (many/p command/p)]
     eof/p
     [pure program]))
+
+(define (parse str)
+  (parse-result! (parse-string program/p str)))
+
+(module+ test
+  (test-equal? "Simple test case"
+               (parse "(hello!)S")
+               (list (push-token "hello!") 'print))
+  (test-equal? "Test all token types"
+               (parse ":*~aS^!()")
+               (list 'duplicate
+                     'concat
+                     'swap
+                     'enclose
+                     'print
+                     'eval
+                     'drop
+                     (push-token "")))
+  (test-equal? "Test nested parens"
+               (parse "(()())")
+               (list (push-token "()()")))
+  (test-exn "Unexpected characters throw exns"
+            exn:fail:read:megaparsack?
+            (λ() (parse "qqqqq")))
+  (test-exn "Unmatched parens throw exns"
+            exn:fail:read:megaparsack?
+            (λ() (parse "(()")))
+  (test-exn "Unescaped special chars throw exns"
+            exn:fail:read:megaparsack?
+            (λ() (parse "(<)")))
+  (test-equal? "Escaped special chars unescaped when read"
+               (parse "(\\<)")
+               (list (push-token "<"))))
