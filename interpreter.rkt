@@ -1,5 +1,7 @@
 #lang typed/racket
 
+(require "ast.rkt")
+
 (provide interpret)
 
 ;; Testing module: This should only imported if you 
@@ -18,29 +20,7 @@
            drop
            prints
            concat
-           (struct-out state)
-           (struct-out push-token)))
-
-;; A Token is one of
-;; - "($1)" -> (push-token $1)
-;; - ":"      -> 'duplicate
-;; - "~"      -> 'swap
-;; - "*"      -> 'concat
-;; - "a"      -> 'enclose
-;; - "^"      -> 'eval
-;; - "!"      -> 'drop
-;; - "S"      -> 'print
-(struct push-token ([value : String])
-  #:transparent)
-(define-type Token
-  (U push-token
-     'concat
-     'duplicate
-     'swap
-     'enclose
-     'eval
-     'drop
-     'print))
+           (struct-out state)))
 
 ;; A State is a (make-state [List Token] [List String])
 (define-struct state ([program : (Listof Token)]

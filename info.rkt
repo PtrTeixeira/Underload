@@ -8,6 +8,7 @@
 
 (define deps '("base"
                "rackunit-lib"
-               ("megaparsack-lib" #:version "1.2.1")
+               "parsack"
+               ("megaparsack" #:version "1.2.1")
                ("typed-racket-lib" #:version "1.7")))
 
