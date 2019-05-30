@@ -3,9 +3,9 @@ jobs:
   build:
     working_directory: ~/build
     docker:
-      - image: ptrteixeira/racket:6.12
+      - image: ptrteixeira/racket:7.3
     steps:
-      - run: apt-get update && apt-get install -y git sqlite
+      - run: apt-get update && apt-get install -y git sqlite3
       - checkout
       - run: raco pkg install --deps search-auto --batch ~/build
       - run: raco test --table ~/build
